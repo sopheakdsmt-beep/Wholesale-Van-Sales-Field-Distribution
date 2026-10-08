@@ -80,6 +80,16 @@ describe("truck ledger", () => {
     expect(amended.drafts.vireak.qty.angkor.crate).toBe(3);
   });
 
+  it("moves cash into KHQR when the invoice is already balanced", () => {
+    let state = reducer(blankState(), { type: "inc", shopId: "prek", productId: "angkor", unit: "crate", delta: 2 });
+    const due = quoteFromQty("prek", state.drafts.prek.qty).due;
+    state = reducer(state, { type: "preset", shopId: "prek", mode: "cash" });
+    state = reducer(state, { type: "tender", shopId: "prek", channel: "khqr", deltaCents: 1000 });
+    expect(state.drafts.prek.khqr).toBe(1000);
+    expect(state.drafts.prek.cash).toBe(due - 1000);
+    expect(state.drafts.prek.cash + state.drafts.prek.khqr + state.drafts.prek.credit).toBe(due);
+  });
+
   it("keeps an untouched order on all-cash until the driver splits it", () => {
     let state = reducer(blankState(), { type: "inc", shopId: "mao", productId: "mama", unit: "pack", delta: 2 });
     const quote = quoteFromQty("mao", state.drafts.mao.qty);

@@ -130,11 +130,14 @@ function OrderPad({ shopId }: { shopId: string }) {
           ស្រាបៀរ {quote.beerCases.toFixed(1)} កេស · បញ្ចុះ 2% ចាប់ពី {VOLUME_CASE_THRESHOLD} កេស
         </span>
         <span className="chip">បញ្ចុះហាង {shop.tradePct}% គណនាឲ្យស្រាប់</span>
-        <span className="chip quiet">តម្លៃរាយ វេច និងកេស នៅលើជួរតែមួយ</span>
+        <span className="chip quiet">រាយ · វេច · កេស នៅជួរតែមួយ · $1 = ៛4,100</span>
         <div className="row-actions tight">
           <button onClick={() => dispatch({ type: "usual", shopId })}>ដាក់ការបញ្ជាធម្មតា</button>
           <button onClick={() => dispatch({ type: "clear", shopId })}>សម្អាត</button>
           <button onClick={() => dispatch({ type: "skip", shopId })}>រំលងហាង</button>
+          <button onClick={() => dispatch({ type: "preset", shopId, mode: "cash" })}>ទាំងអស់សាច់ប្រាក់</button>
+          <button onClick={() => dispatch({ type: "preset", shopId, mode: "khqr" })}>ទាំងអស់ KHQR</button>
+          <button onClick={() => dispatch({ type: "preset", shopId, mode: "split" })}>ពាក់កណ្តាលជំពាក់</button>
         </div>
       </div>
       <div className="matrix-scroll">
@@ -172,23 +175,12 @@ function OrderPad({ shopId }: { shopId: string }) {
             <span>ត្រូវបង់</span>
             <strong className="num">{money(quote.due)}</strong>
           </p>
-          <small className="num">{khr(quote.due)} · អត្រាដេប៉ូ $1 = ៛4,100</small>
-        </div>
-        <div className="preset-row">
-          <button onClick={() => dispatch({ type: "preset", shopId, mode: "cash" })}>ទាំងអស់សាច់ប្រាក់</button>
-          <button onClick={() => dispatch({ type: "preset", shopId, mode: "khqr" })}>ទាំងអស់ KHQR</button>
-          <button onClick={() => dispatch({ type: "preset", shopId, mode: "split" })}>ពាក់កណ្តាលជំពាក់</button>
+          <small className="num">{khr(quote.due)}</small>
         </div>
         <div className="tenders">
-          <Tender shopId={shopId} channel="cash" label="សាច់ប្រាក់" en="Cash" amount={tender.cash} />
-          <Tender shopId={shopId} channel="khqr" label="KHQR" en="Bakong QR" amount={tender.khqr} />
-          <Tender
-            shopId={shopId}
-            channel="credit"
-            label="ជំពាក់"
-            en={`Room ${money(creditRoom(state, shopId))}`}
-            amount={tender.credit}
-          />
+          <Tender shopId={shopId} channel="cash" label="សាច់ប្រាក់" hint="Cash" amount={tender.cash} />
+          <Tender shopId={shopId} channel="khqr" label="KHQR" hint="QR" amount={tender.khqr} />
+          <Tender shopId={shopId} channel="credit" label="ជំពាក់" hint={`ដែន ${money(creditRoom(state, shopId))}`} amount={tender.credit} />
         </div>
         <div className="confirm-row">
           <p className={gap === 0 ? "gap ok" : "gap"}>
@@ -270,13 +262,13 @@ function Tender({
   shopId,
   channel,
   label,
-  en,
+  hint,
   amount,
 }: {
   shopId: string;
   channel: Channel;
   label: string;
-  en: string;
+  hint: string;
   amount: number;
 }) {
   const { dispatch } = useStore();
@@ -284,8 +276,11 @@ function Tender({
   return (
     <div className={`tender ${channel}`}>
       <div className="tender-name">
-        <strong>{label}</strong>
-        <small>{en}</small>
+        <strong>
+          {label}
+          <small>{hint}</small>
+        </strong>
+        <b className="num">{money(amount)}</b>
       </div>
       <div className="stepper tender-step">
         <button aria-label={`${label} minus 10`} onClick={() => bump(-1000)}>
@@ -294,7 +289,6 @@ function Tender({
         <button aria-label={`${label} minus 1`} onClick={() => bump(-100)}>
           −1
         </button>
-        <strong className="num">{money(amount)}</strong>
         <button aria-label={`${label} plus 1`} onClick={() => bump(100)}>
           +1
         </button>

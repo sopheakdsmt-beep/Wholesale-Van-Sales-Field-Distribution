@@ -68,19 +68,42 @@ function clampQty(desired: LineQty, productId: string, maxPieces: number): LineQ
   return qty;
 }
 
-function applyChannel(
+/** Move money between cash, KHQR, and credit without going past the amount due. */
+function shiftTender(
   current: Record<Channel, number>,
   channel: Channel,
-  nextValue: number,
+  delta: number,
   due: number,
-  room: number,
+  creditRoom: number,
 ): { tender: Record<Channel, number>; note: string | null } {
-  const tender = { ...current, [channel]: Math.max(0, nextValue) };
+  const tender = { ...current };
   let note: string | null = null;
-  if (channel === "credit" && tender.credit > room) {
-    tender.credit = room;
-    note = "លើសដែនជំពាក់របស់ហាង";
+  if (delta > 0) {
+    let want = delta;
+    if (channel === "credit") {
+      const cap = Math.max(0, creditRoom - tender.credit);
+      if (want > cap) {
+        want = cap;
+        note = "លើសដែនជំពាក់របស់ហាង";
+      }
+    }
+    const donors: Channel[] = (["cash", "khqr", "credit"] as const).filter((item) => item !== channel);
+    for (const donor of donors) {
+      if (want <= 0) break;
+      const take = Math.min(tender[donor], want);
+      tender[donor] -= take;
+      tender[channel] += take;
+      want -= take;
+    }
+    const gap = due - (tender.cash + tender.khqr + tender.credit);
+    if (gap > 0 && want > 0) tender[channel] += Math.min(gap, want);
+  } else {
+    const give = Math.min(tender[channel], -delta);
+    tender[channel] -= give;
+    if (channel !== "cash") tender.cash += give;
   }
+  tender.credit = Math.min(tender.credit, creditRoom);
+  for (const key of ["cash", "khqr", "credit"] as const) tender[key] = Math.max(0, tender[key]);
   const sum = tender.cash + tender.khqr + tender.credit;
   if (sum > due) tender[channel] = Math.max(0, tender[channel] - (sum - due));
   return { tender, note };
@@ -213,11 +236,11 @@ export function reducer(state: State, action: Action): State {
         }
       } else if (action.type === "fill") {
         const gap = due - (base.cash + base.khqr + base.credit);
-        const applied = applyChannel(base, action.channel, base[action.channel] + gap, due, room);
+        const applied = shiftTender(base, action.channel, gap, due, room);
         next = applied.tender;
         note = applied.note;
       } else {
-        const applied = applyChannel(base, action.channel, base[action.channel] + action.deltaCents, due, room);
+        const applied = shiftTender(base, action.channel, action.deltaCents, due, room);
         next = applied.tender;
         note = applied.note;
       }

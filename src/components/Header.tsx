@@ -28,9 +28,9 @@ export function Header() {
         </div>
       </div>
       <div className="route-meta">
-        <strong>{DEPOT.routeKm}</strong>
+        <strong>RC-07 · ផ្លូវទន្លេ</strong>
         <small>
-          {DEPOT.driverKm} · ជំនួយ {DEPOT.helperKm} · ៨ តុលា ២០២៦ · {done}/{SHOPS.length} ហាង
+          {DEPOT.driverKm} · ៨ តុលា · {done}/{SHOPS.length} ហាង
         </small>
       </div>
       <button className="stat" onClick={() => dispatch({ type: "view", view: "ledger" })}>
